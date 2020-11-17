@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/Algoru/frontera/application"
 	mongoadapter "github.com/Algoru/frontera/infrastructure/database/mongo_adapter"
@@ -22,11 +23,17 @@ func main() {
 		Database: os.Getenv("MONGO_DATABASE_NAME"),
 	}
 
-	ginAdapter := ginadapter.GinAdapter{}
+	strHTTPRestPort := os.Getenv("REST_HTTP_PORT")
+	httpRestPort, err := strconv.ParseUint(strHTTPRestPort, 10, 16)
+	if err != nil {
+		log.Fatalf("unable to use %s as HTTP REST port: %s\n", strHTTPRestPort, err)
+	}
 
-	appConfig := application.ApplicationConfiguration{
-		DatabaseAdapter: mongoAdapter,
-		RestAdatapter:   ginAdapter,
+	ginAdapter := ginadapter.NewGinAdapter(uint16(httpRestPort))
+
+	appConfig := application.Configuration{
+		DatabasePort: &mongoAdapter,
+		RestPort:     &ginAdapter,
 	}
 
 	if err := appConfig.Start(); err != nil {
