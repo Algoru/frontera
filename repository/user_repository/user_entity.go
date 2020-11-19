@@ -1,9 +1,10 @@
 package userrepository
 
 import (
-	"encoding/hex"
 	"strings"
 	"time"
+
+	"github.com/Algoru/frontera/configuration"
 
 	"github.com/Algoru/frontera/domain/entity"
 	"github.com/google/uuid"
@@ -52,18 +53,17 @@ func (u *User) Sanitize() {
 func (u *User) EncryptPassword() (string, error) {
 	passwordBytes := []byte(u.Password)
 
-	hash, err := bcrypt.GenerateFromPassword(passwordBytes, encryptPasswordCost)
+	cost := configuration.GetConfiguration().Security.BCryptCost
+	hash, err := bcrypt.GenerateFromPassword(passwordBytes, int(cost))
 	if err != nil {
 		return "", err
 	}
 
-	return hex.EncodeToString(hash), nil
+	return string(hash), nil
 }
 
 // Prepare
 func (u *User) Prepare() (*User, error) {
-	u.Sanitize()
-
 	userID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err

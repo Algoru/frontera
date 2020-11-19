@@ -1,0 +1,40 @@
+debug = false
+
+[database]
+host = "localhost"
+database = "YOUR_DB_NAME_HERE"
+user = "YOUR_DB_USER_HERE"
+password = "YOUR_PASSWORD_HERE"
+timeout = 10 # seconds
+auth_source = "admin" # MongoDB only: authSource URI param value
+
+[security]
+min_password_length = 8
+bcrypt_cost = 14
+token_issuer = "frontera"
+token_signing_key = "Y0UR_53CR37_P455W0RD_H3R3"
+token_lifetime = 1 # Hours
+auth_use_field = "email" # Which value should be used for authentication, email ? payload.username ? other... ?
+
+[user]
+allow_duplicate_email = false # Perform email validation
+allow_null_payload = false # Allow null payload objects
+allow_multiple_sessions = false
+
+    [user.payload.birthdate]
+    required = true
+    format = "time"
+    [user.payload.nickname]
+    required = true
+    format = "string"
+    min = 3 # min characters
+    max = 16 # max characters
+    [user.payload.send_newsletter]
+    required = false # or don't specify this option
+    format = "boolean"
+    default_value = false
+
+[http]
+port = 3000
+user_base_path = "/users"
+auth_base_path = "/auth"

@@ -73,3 +73,19 @@ func (ma *MongoAdapter) DeleteUser(userID uuid.UUID) (*entity.User, error) {
 
 	return &userFound, nil
 }
+
+// GetUserByEmail
+func (ma *MongoAdapter) GetUserByEmail(email string) (*entity.User, error) {
+	result := ma.client.Database(ma.Database).Collection(usersCollectionName).FindOne(context.TODO(), bson.M{"email": email})
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+
+	userFound := userrepository.User{}
+	if err := result.Decode(&userFound); err != nil {
+		return nil, err
+	}
+
+	user := userFound.ToRawEntity()
+	return &user, nil
+}

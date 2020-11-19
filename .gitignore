@@ -1,5 +1,5 @@
 frontera
-
+cfg.toml
 
 # Created by https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,intellij,macos,linux,emacs,vim,windows,notepadpp,sublimetext,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,visualstudiocode,intellij,macos,linux,emacs,vim,windows,notepadpp,sublimetext,dotenv
@@ -56,7 +56,6 @@ flycheck_*.el
 
 # network security
 /network-security.data
-
 
 ### Go ###
 # Binaries for programs and plugins
@@ -205,7 +204,6 @@ fabric.properties
 # Icon must end with two \r
 Icon
 
-
 # Thumbnails
 ._*
 
@@ -264,7 +262,7 @@ GitHub.sublime-settings
 ### Vim ###
 # Swap
 [._]*.s[a-v][a-z]
-!*.svg  # comment out if you don't need vector files
+!*.svg # comment out if you don't need vector files
 [._]*.sw[a-p]
 [._]s[a-rt-v][a-z]
 [._]ss[a-gi-z]

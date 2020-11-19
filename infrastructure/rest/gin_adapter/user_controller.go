@@ -4,16 +4,22 @@ import (
 	"log"
 	"net/http"
 
+	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/Algoru/frontera/configuration"
 	"github.com/Algoru/frontera/domain/service"
 	userrepository "github.com/Algoru/frontera/repository/user_repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func InitUserRoutes(group *gin.RouterGroup, us service.UserService) {
-	users := group.Group("/users")
+func initUserRoutes(group *gin.RouterGroup, us service.UserService) {
+	usersPath := configuration.GetConfiguration().HTTP.UserBasePath
+	if usersPath == "" {
+		usersPath = "/users"
+	}
+	users := group.Group(usersPath)
 
-	log.Println("us when init:", us)
 	users.POST("/", createUserController(us))
 	users.GET("/:id", getUserController(us))
 	users.PUT("/:id", updateUserController(us))
@@ -29,12 +35,29 @@ func createUserController(us service.UserService) gin.HandlerFunc {
 			return
 		}
 
+		user.Sanitize()
+		if errors := us.HasRequiredFields(user); errors != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"errors": errors})
+			return
+		}
+
+		_, err := us.GetUserByEmail(user.Email)
+		if err == nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "email already being used"})
+			return
+		} else if err != nil && err != mongo.ErrNoDocuments {
+			log.Printf("unable to check if email is being used: %s\n", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": "unable to check if email is in use"})
+			return
+		}
+
 		created, err := us.CreateUser(user)
 		if err != nil {
 			log.Printf("unable to save user: %s\n", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		created.RemoveSensible()
 
 		c.JSON(http.StatusCreated, created)
 	}

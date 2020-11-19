@@ -6,5 +6,6 @@ import "github.com/Algoru/frontera/domain/service"
 type Port interface {
 	Start() error
 	SetUserService(service.UserService)
+	SetAuthService(service.AuthService)
 	InitRoutes()
 }

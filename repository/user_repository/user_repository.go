@@ -11,4 +11,5 @@ type UserRepository interface {
 	GetUser(uuid.UUID) (*entity.User, error)
 	UpdateUser(uuid.UUID, User) (*entity.User, error)
 	DeleteUser(uuid.UUID) (*entity.User, error)
+	GetUserByEmail(string) (*entity.User, error)
 }

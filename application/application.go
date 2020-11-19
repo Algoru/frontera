@@ -22,9 +22,12 @@ func (ac *Configuration) Start() error {
 	}
 
 	userService := service.NewUserService(ac.DatabasePort)
+	authService := service.NewAuthService(ac.DatabasePort, ac.DatabasePort)
 
 	ac.RestPort.SetUserService(userService)
+	ac.RestPort.SetAuthService(authService)
 	ac.RestPort.InitRoutes()
 
+	log.Println("starting rest adapter")
 	return ac.RestPort.Start()
 }

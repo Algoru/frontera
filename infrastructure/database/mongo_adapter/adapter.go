@@ -17,21 +17,21 @@ type MongoAdapter struct {
 	Host       string
 	Database   string
 	AuthSource string
-	Timeout    time.Duration
+	Timeout    int64
 	client     mongo.Client
 }
 
 // StartDatabase
 func (ma *MongoAdapter) StartDatabase() error {
-	if ma.Timeout < 1*time.Second {
-		ma.Timeout = 10 * time.Second
+	if ma.Timeout <= 0 {
+		ma.Timeout = 10
 	}
 
 	if ma.AuthSource == "" {
 		ma.AuthSource = "admin"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), ma.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(ma.Timeout)*time.Second)
 	defer cancel()
 
 	connURI := fmt.Sprintf(
