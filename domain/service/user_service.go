@@ -14,11 +14,11 @@ import (
 
 // UserService
 type UserService interface {
-	CreateUser(*userrepository.User) (*entity.User, error)
+	CreateUser(*entity.User) (*entity.User, error)
 	GetUser(uuid.UUID) (*entity.User, error)
 	UpdateUser(uuid.UUID, *entity.User) (*entity.User, error)
 	DeleteUser(uuid.UUID) (*entity.User, error)
-	HasRequiredFields(*userrepository.User) []string
+	HasRequiredFields(*entity.User) []string
 	GetUserByEmail(string) (*entity.User, error)
 }
 
@@ -30,7 +30,7 @@ func NewUserService(r userrepository.UserRepository) UserService {
 	return &userService{repo: r}
 }
 
-func (s *userService) CreateUser(u *userrepository.User) (*entity.User, error) {
+func (s *userService) CreateUser(u *entity.User) (*entity.User, error) {
 	prepared, err := u.Prepare()
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (s *userService) DeleteUser(userID uuid.UUID) (*entity.User, error) {
 	return s.repo.DeleteUser(userID)
 }
 
-func (s *userService) HasRequiredFields(u *userrepository.User) []string {
+func (s *userService) HasRequiredFields(u *entity.User) []string {
 	errors := make([]string, 0)
 
 	if err := checkmail.ValidateFormat(u.Email); err != nil {

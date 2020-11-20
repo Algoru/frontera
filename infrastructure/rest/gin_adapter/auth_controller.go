@@ -1,9 +1,11 @@
 package ginadapter
 
 import (
+	"github.com/Algoru/frontera/domain/entity"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Algoru/frontera/configuration"
@@ -34,10 +36,17 @@ func loginController(as service.AuthService) gin.HandlerFunc {
 			return
 		}
 
+		errors := auth.HasRequiredFields()
+		if errors != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"errors": errors})
+			return
+		}
+
 		credential, err := as.Login(auth)
 		if err != nil {
 			log.Printf("unable to login user with email \"%s\": %s\n", auth.Email, err.Error())
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			statusCode := entity.GetStatusCodeForError(err)
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -59,9 +68,10 @@ func loginController(as service.AuthService) gin.HandlerFunc {
 
 func logoutController(as service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			c.AbortWithStatus(http.StatusUnauthorized)
+		authHeader, err := getTokenFromAuthHeader(c)
+		if err != nil {
+			statusCode := entity.GetStatusCodeForError(err)
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -70,7 +80,7 @@ func logoutController(as service.AuthService) gin.HandlerFunc {
 			flush = false // Just to be explicit
 		}
 
-		if err := as.Logout(token, flush); err != nil {
+		if err := as.Logout(authHeader, flush); err != nil {
 			log.Printf("unable to perform logout: %s\n", err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -82,21 +92,23 @@ func logoutController(as service.AuthService) gin.HandlerFunc {
 
 func checkController(as service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			c.AbortWithStatus(http.StatusUnauthorized)
+		authHeader, err := getTokenFromAuthHeader(c)
+		if err != nil {
+			statusCode := entity.GetStatusCodeForError(err)
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Error()})
 			return
 		}
 
-		credential, err := as.GetCredentialByToken(token)
+		credential, err := as.GetCredentialByToken(authHeader)
 		if err != nil {
 			log.Printf("unable to get credential by token: %s\n", err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		tokenDuration := time.Duration(configuration.GetConfiguration().Security.TokenLifetime) * time.Hour
-		if time.Now().Sub(credential.ExpiresAt) >= tokenDuration {
+		tokenDuration := (time.Duration(configuration.GetConfiguration().Security.TokenLifetime) * time.Hour).Hours()
+		hoursFromNow := time.Now().Sub(credential.ExpiresAt).Hours()
+		if hoursFromNow >= tokenDuration {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
@@ -107,6 +119,41 @@ func checkController(as service.AuthService) gin.HandlerFunc {
 
 func refreshController(as service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		authHeader, err := getTokenFromAuthHeader(c)
+		if err != nil {
+			statusCode := entity.GetStatusCodeForError(err)
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Error()})
+			return
+		}
 
+		credential, err := as.GetCredentialByToken(authHeader)
+		if err != nil {
+			log.Printf("unable to get credential by token: %s\n", err)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		refreshed, err := as.RefreshCredential(credential)
+		if err != nil {
+			log.Printf("unable to refresh credential: %s\n", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		c.JSON(http.StatusOK, refreshed)
 	}
+}
+
+func getTokenFromAuthHeader(c *gin.Context) (string, error) {
+	headerValue := c.GetHeader("Authorization")
+	if headerValue == "" {
+		return "", entity.ErrInvalidAuthHeader
+	}
+
+	parts := strings.Split(headerValue, " ")
+	if len(parts) != 2 {
+		return "", entity.ErrInvalidAuthHeader
+	}
+
+	return parts[1], nil
 }

@@ -16,7 +16,7 @@ type Configuration struct {
 	HTTP     HTTPConfiguration
 }
 
-var global Configuration
+var instance Configuration
 
 // LoadConfigurationFromFile
 func LoadConfigurationFromFile(path string) error {
@@ -26,7 +26,7 @@ func LoadConfigurationFromFile(path string) error {
 	}
 	defer file.Close()
 
-	if err = toml.NewDecoder(file).Decode(&global); err != nil {
+	if err = toml.NewDecoder(file).Decode(&instance); err != nil {
 		return err
 	}
 
@@ -34,12 +34,12 @@ func LoadConfigurationFromFile(path string) error {
 }
 
 func PrintWarnings() {
-	if global.Security.TokenSigningKey == "" {
+	if instance.Security.TokenSigningKey == "" {
 		log.Println("WARNING: using empty token signing key")
 	}
 }
 
 // GetConfiguration returns a copy of the loaded configuration
 func GetConfiguration() Configuration {
-	return global
+	return instance
 }

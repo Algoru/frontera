@@ -1,14 +1,12 @@
 package ginadapter
 
 import (
+	"github.com/Algoru/frontera/domain/entity"
 	"log"
 	"net/http"
 
-	"go.mongodb.org/mongo-driver/mongo"
-
 	"github.com/Algoru/frontera/configuration"
 	"github.com/Algoru/frontera/domain/service"
-	userrepository "github.com/Algoru/frontera/repository/user_repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -28,7 +26,7 @@ func initUserRoutes(group *gin.RouterGroup, us service.UserService) {
 
 func createUserController(us service.UserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user := new(userrepository.User)
+		user := new(entity.User)
 		if err := c.BindJSON(user); err != nil {
 			log.Printf("unable to bind user JSON: %s\n", err)
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -45,7 +43,7 @@ func createUserController(us service.UserService) gin.HandlerFunc {
 		if err == nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "email already being used"})
 			return
-		} else if err != nil && err != mongo.ErrNoDocuments {
+		} else if err != entity.ErrUserNotFound {
 			log.Printf("unable to check if email is being used: %s\n", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"errors": "unable to check if email is in use"})
 			return

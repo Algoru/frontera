@@ -4,17 +4,18 @@ import (
 	"context"
 
 	"github.com/Algoru/frontera/domain/entity"
-	userrepository "github.com/Algoru/frontera/repository/user_repository"
+	mongomodels "github.com/Algoru/frontera/infrastructure/database/mongo_adapter/models"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const usersCollectionName = "users"
 
 // CreateUser
-func (ma *MongoAdapter) CreateUser(u *userrepository.User) (*entity.User, error) {
+func (ma *MongoAdapter) CreateUser(u *entity.User) (*entity.User, error) {
 	result, err := ma.client.Database(ma.Database).Collection(usersCollectionName).InsertOne(context.TODO(), bson.M{
 		"user_id":    u.UserID,
 		"email":      u.Email,
@@ -28,9 +29,7 @@ func (ma *MongoAdapter) CreateUser(u *userrepository.User) (*entity.User, error)
 	}
 
 	u.ID = result.InsertedID.(primitive.ObjectID)
-	entityUser := u.ToRawEntity()
-
-	return &entityUser, nil
+	return u, nil
 }
 
 // GetUser
@@ -38,20 +37,27 @@ func (ma *MongoAdapter) GetUser(userID uuid.UUID) (*entity.User, error) {
 	result := ma.client.Database(ma.Database).Collection(usersCollectionName).
 		FindOne(context.TODO(), bson.M{"user_id": userID.String()})
 	if err := result.Err(); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, entity.ErrUserNotFound
+		}
 		return nil, err
 	}
 
-	userFound := userrepository.User{}
+	userFound := mongomodels.User{}
 	if err := result.Decode(&userFound); err != nil {
 		return nil, err
 	}
 
-	rawEntity := userFound.ToRawEntity()
-	return &rawEntity, nil
+	userEntity, err := userFound.ToEntity()
+	if err != nil {
+		return nil, err
+	}
+
+	return userEntity, nil
 }
 
 // UpdateUser
-func (ma *MongoAdapter) UpdateUser(userID uuid.UUID, u userrepository.User) (*entity.User, error) {
+func (ma *MongoAdapter) UpdateUser(userID uuid.UUID, u *entity.User) (*entity.User, error) {
 	// TODO (@Algoru): Identify how user update should me made
 	return nil, nil
 }
@@ -78,14 +84,21 @@ func (ma *MongoAdapter) DeleteUser(userID uuid.UUID) (*entity.User, error) {
 func (ma *MongoAdapter) GetUserByEmail(email string) (*entity.User, error) {
 	result := ma.client.Database(ma.Database).Collection(usersCollectionName).FindOne(context.TODO(), bson.M{"email": email})
 	if err := result.Err(); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, entity.ErrUserNotFound
+		}
 		return nil, err
 	}
 
-	userFound := userrepository.User{}
+	userFound := mongomodels.User{}
 	if err := result.Decode(&userFound); err != nil {
 		return nil, err
 	}
 
-	user := userFound.ToRawEntity()
-	return &user, nil
+	userEntity, err := userFound.ToEntity()
+	if err != nil {
+		return nil, err
+	}
+
+	return userEntity, nil
 }

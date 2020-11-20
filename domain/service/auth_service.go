@@ -21,6 +21,7 @@ type AuthService interface {
 	AddUserSession(*entity.Credential) error
 	GetCredentialByToken(string) (*entity.Credential, error)
 	RemoveSingleSession(string, string) error
+	RefreshCredential(credential *entity.Credential) (*entity.Credential, error)
 }
 
 type authService struct {
@@ -47,10 +48,14 @@ func (s *authService) Login(auth *authrepository.Auth) (*entity.Credential, erro
 	userHashedPassword := []byte(user.Password)
 	enteredPassword := []byte(auth.Password)
 	if err = bcrypt.CompareHashAndPassword(userHashedPassword, enteredPassword); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return nil, entity.ErrInvalidAuthCredentials
+		}
+
 		return nil, err
 	}
 
-	token, expiresAt, err := generateToken(user)
+	token, expiresAt, err := generateToken(user.UserID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +100,7 @@ func (s *authService) Logout(token string, flush bool) error {
 	return err
 }
 
-func generateToken(user *entity.User) (string, time.Time, error) {
+func generateToken(userID string) (string, time.Time, error) {
 	secConfig := configuration.GetConfiguration().Security
 
 	tokenIssuer := secConfig.TokenIssuer
@@ -107,7 +112,7 @@ func generateToken(user *entity.User) (string, time.Time, error) {
 	tokenExpiresAt := tokenIssuedAt.Add(time.Hour * time.Duration(secConfig.TokenLifetime))
 
 	authClaims := authrepository.AuthClaims{
-		UserID: user.UserID.String(),
+		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: tokenExpiresAt.Unix(),
 			IssuedAt:  tokenIssuedAt.Unix(),
@@ -138,4 +143,27 @@ func (s *authService) GetCredentialByToken(token string) (*entity.Credential, er
 
 func (s *authService) RemoveSingleSession(userID string, token string) error {
 	return s.authRepository.RemoveSingleSession(userID, token)
+}
+
+func (s *authService) RefreshCredential(credential *entity.Credential) (*entity.Credential, error) {
+	token, expiresAt, err := generateToken(credential.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshed := entity.Credential{
+		UserID:    credential.UserID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+	}
+
+	if err = s.authRepository.RemoveSingleSession(credential.UserID, credential.Token); err != nil {
+		return nil, err
+	}
+
+	if err = s.authRepository.AddUserSession(credential); err != nil {
+		return nil, err
+	}
+
+	return &refreshed, nil
 }

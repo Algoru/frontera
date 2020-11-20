@@ -7,9 +7,9 @@ import (
 
 // UserRepository
 type UserRepository interface {
-	CreateUser(*User) (*entity.User, error)
+	CreateUser(*entity.User) (*entity.User, error)
 	GetUser(uuid.UUID) (*entity.User, error)
-	UpdateUser(uuid.UUID, User) (*entity.User, error)
+	UpdateUser(uuid.UUID, *entity.User) (*entity.User, error)
 	DeleteUser(uuid.UUID) (*entity.User, error)
 	GetUserByEmail(string) (*entity.User, error)
 }

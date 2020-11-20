@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/Algoru/frontera/domain/service"
@@ -18,7 +19,7 @@ type Configuration struct {
 func (ac *Configuration) Start() error {
 	log.Println("starting database adapter")
 	if err := ac.DatabasePort.StartDatabase(); err != nil {
-		return err
+		return fmt.Errorf("unable to start database: %s", err.Error())
 	}
 
 	userService := service.NewUserService(ac.DatabasePort)

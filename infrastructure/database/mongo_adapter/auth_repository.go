@@ -2,6 +2,7 @@ package mongoadapter
 
 import (
 	"context"
+	mongomodels "github.com/Algoru/frontera/infrastructure/database/mongo_adapter/models"
 	"time"
 
 	"github.com/Algoru/frontera/domain/entity"
@@ -17,12 +18,13 @@ func (ma *MongoAdapter) GetCredentialByToken(token string) (*entity.Credential, 
 		return nil, err
 	}
 
-	credential := entity.Credential{}
+	credential := mongomodels.Credential{}
 	if err := result.Decode(&credential); err != nil {
 		return nil, err
 	}
 
-	return &credential, nil
+	credentialEntity := credential.ToEntity()
+	return &credentialEntity, nil
 }
 
 // AddUserSession
